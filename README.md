@@ -1,3 +1,5 @@
+https://editor0518.github.io/DemandSurveyForm_My_R
+
 # My R 유저 설문 결과 사이트
 
 구글 폼 응답 시트를 불러와 10~20대 응답을 분석하고, 레미제라블 팬과 비팬을 나눠 보여주는 정적 사이트입니다.
@@ -18,12 +20,6 @@
 
 > 두 방법 모두 응답 내용(자유 의견 포함)이 인터넷에 공개됩니다. 자유 의견을 숨기려면 `SHOW_COMMENTS: false`로 바꾸세요.
 > 설문에 개인정보(연락처 등)를 받는 문항이 없으므로 그 외 공개 위험은 낮습니다.
-
-## 2. GitHub Pages 배포
-1. GitHub에서 새 저장소 생성 (Public)
-2. `Add file → Upload files`로 `index.html`, `analysis.js`, `README.md` 업로드 → Commit
-3. `Settings → Pages → Build and deployment → Source: Deploy from a branch`, Branch: `main` / `(root)` → Save
-4. 1~2분 뒤 `https://<깃허브아이디>.github.io/<저장소이름>/`에서 확인
 
 ## 분석 기준
 - **분석 대상**: 나이대 14~16세, 17~19세, 20~23세, 24~26세, 27~29세 (다른 언어는 같은 순서의 출생연도 보기)
