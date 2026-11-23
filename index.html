@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My R 유저 설문 결과</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+/* ===== 테마 ===== */
+:root {
+  color-scheme: light;
+  --bg: #f4f3f0;
+  --surface-1: #fcfcfb;
+  --surface-2: #efeeea;
+  --border: #e2e0da;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #7a7974;
+  --grid: #e7e5df;
+  --series-1: #2a78d6; /* 레미제라블 팬 */
+  --series-2: #eb6834; /* 비팬 */
+  --accent: #2a78d6;
+  --good: #0e7a3e; --good-bg: #e3f3e9;
+  --warn: #8a5a00; --warn-bg: #fbf0d6;
+  --bad: #b3261e;  --bad-bg: #fbe4e2;
+  --info: #3b4a63; --info-bg: #e6eaf1;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --bg: #121211; --surface-1: #1a1a19; --surface-2: #232321; --border: #2f2f2c;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f; --grid: #2c2c29;
+    --series-1: #3987e5; --series-2: #d95926; --accent: #3987e5;
+    --good: #6fd49a; --good-bg: #1d3326; --warn: #f0c060; --warn-bg: #3a3020;
+    --bad: #f19a93; --bad-bg: #3d2220; --info: #b9c6dc; --info-bg: #262c38;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211; --surface-1: #1a1a19; --surface-2: #232321; --border: #2f2f2c;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #9a998f; --grid: #2c2c29;
+  --series-1: #3987e5; --series-2: #d95926; --accent: #3987e5;
+  --good: #6fd49a; --good-bg: #1d3326; --warn: #f0c060; --warn-bg: #3a3020;
+  --bad: #f19a93; --bad-bg: #3d2220; --info: #b9c6dc; --info-bg: #262c38;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+body {
+  margin: 0; background: var(--bg); color: var(--text-primary);
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: 15px; line-height: 1.65; word-break: keep-all;
+}
+a { color: var(--accent); }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+
+/* 헤더 */
+header.top { padding: 40px 0 20px; }
+.eyebrow { font-size: 13px; color: var(--text-muted); letter-spacing: .02em; }
+h1 { font-size: 30px; line-height: 1.25; margin: 6px 0 8px; letter-spacing: -.01em; }
+.sub { color: var(--text-secondary); margin: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; }
+button, .btn {
+  font: inherit; font-size: 13px; border: 1px solid var(--border); background: var(--surface-1);
+  color: var(--text-primary); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+}
+button:hover, .btn:hover { background: var(--surface-2); }
+.status { font-size: 13px; color: var(--text-muted); }
+
+/* 내비 */
+nav.tabs { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--border); }
+nav.tabs .wrap { display: flex; gap: 4px; overflow-x: auto; padding-top: 8px; padding-bottom: 8px; }
+nav.tabs a { white-space: nowrap; text-decoration: none; color: var(--text-secondary); font-size: 14px; padding: 6px 12px; border-radius: 999px; }
+nav.tabs a:hover { background: var(--surface-2); color: var(--text-primary); }
+
+section { padding: 36px 0 8px; }
+h2 { font-size: 22px; margin: 0 0 6px; }
+.sec-desc { color: var(--text-secondary); margin: 0 0 18px; }
+
+/* KPI */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 8px 0 6px; }
+.kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.kpi .k { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+.kpi .v { font-size: 30px; font-weight: 700; line-height: 1.2; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kpi .v small { font-size: 14px; font-weight: 500; color: var(--text-muted); margin-left: 2px; }
+.kpi .d { font-size: 12px; color: var(--text-muted); }
+.swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.sw1 { background: var(--series-1); } .sw2 { background: var(--series-2); }
+
+/* 카드 */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 14px; }
+@media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px 18px 14px; margin-bottom: 14px; }
+.grid2 .card { margin-bottom: 0; }
+.card h3 { font-size: 16px; margin: 0 0 2px; line-height: 1.4; }
+.qid { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-right: 6px; }
+.meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-secondary); margin: 6px 0 10px; flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* 막대 차트 */
+.chart { display: grid; gap: 7px; }
+.row { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 10px; align-items: center; padding: 2px 4px; margin: 0 -4px; border-radius: 6px; cursor: default; }
+.row:hover, .row:focus { background: var(--surface-2); outline: none; }
+.row .lab { font-size: 13px; color: var(--text-secondary); line-height: 1.35; }
+.bars { display: grid; gap: 2px; }
+.bar { display: flex; align-items: center; gap: 6px; height: 11px; }
+.bar i { display: block; height: 11px; border-radius: 0 4px 4px 0; min-width: 0; }
+.bar i.s1 { background: var(--series-1); } .bar i.s2 { background: var(--series-2); }
+.bar b { font-size: 11px; font-weight: 500; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.track { position: relative; background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px); background-size: 21.5% 100%; background-position: 0 0; }
+.mean-line { display: flex; gap: 18px; font-size: 13px; color: var(--text-secondary); margin: 2px 0 8px; flex-wrap: wrap; }
+.mean-line strong { color: var(--text-primary); font-size: 18px; font-variant-numeric: tabular-nums; }
+.scale-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+.narr { margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 10px; }
+.narr p { margin: 0 0 6px; font-size: 14px; color: var(--text-primary); }
+.others { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+details.tbl { margin-top: 6px; }
+details.tbl summary { font-size: 12px; color: var(--text-muted); cursor: pointer; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+th, td { border-bottom: 1px solid var(--border); padding: 4px 6px; text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--text-secondary); font-weight: 600; }
+
+/* 가설 */
+.hyp { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: start; }
+.hyp .id { font-weight: 700; font-size: 18px; color: var(--text-secondary); }
+.hyp .name { font-weight: 600; }
+.hyp .txt { font-size: 14px; color: var(--text-secondary); margin-top: 2px; }
+.badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; display: inline-flex; gap: 4px; align-items: center; }
+.b-good { color: var(--good); background: var(--good-bg); }
+.b-warn { color: var(--warn); background: var(--warn-bg); }
+.b-bad { color: var(--bad); background: var(--bad-bg); }
+.b-info { color: var(--info); background: var(--info-bg); }
+
+/* 제안 */
+.sugg h3 { font-size: 16px; margin: 0 0 6px; }
+.sugg p { margin: 0; }
+.note { font-size: 13px; color: var(--text-secondary); background: var(--surface-2); border-radius: 10px; padding: 10px 14px; margin: 10px 0 0; }
+
+/* 자유 의견 */
+.cm { border-left: 3px solid var(--border); padding: 4px 0 4px 12px; margin: 0 0 12px; white-space: pre-wrap; }
+.cm .tag { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 2px; }
+.cm.fan { border-left-color: var(--series-1); } .cm.non { border-left-color: var(--series-2); }
+
+/* 툴팁 */
+#tip { position: fixed; pointer-events: none; z-index: 20; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,.14); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5; max-width: 300px; display: none; }
+#tip .t { font-weight: 600; margin-bottom: 2px; }
+#tip .l { display: flex; align-items: center; gap: 6px; }
+
+.loading { padding: 60px 0; text-align: center; color: var(--text-muted); }
+.err { background: var(--bad-bg); color: var(--bad); border-radius: 12px; padding: 16px 18px; margin: 20px 0; }
+.err code { font-size: 12px; }
+footer { color: var(--text-muted); font-size: 12px; padding: 40px 0 60px; }
+@media (forced-colors: active) { .bar i { forced-color-adjust: none; } }
+</style>
+</head>
+<body>
+<script>
+/* ===================== 설정 ===================== */
+var CONFIG = {
+  // 응답 시트 ID (구글 시트 주소의 /d/ 와 /edit 사이)
+  SHEET_ID: "1CZm94y8hqiNL5PDqotys7bnNYN0i3Rjlvg_F6J_vkGs",
+  // (권장) 파일 → 공유 → 웹에 게시 → 'CSV'로 게시한 주소를 넣으면 이 주소를 먼저 사용합니다.
+  PUBLISHED_CSV_URL: "",
+  // 시트 탭 이름 (비워두면 첫 번째 탭)
+  SHEET_TAB: "",
+  // 자유 의견을 사이트에 보여줄지 여부 (공개 사이트이므로 주의)
+  SHOW_COMMENTS: true
+};
+</script>
+
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">팀 마피레 · 2026 모두의 창업</div>
+    <h1>My R 유저 설문 결과</h1>
+    <p class="sub">스토리 게임·비주얼노벨 취향 설문의 응답과 그 의미를 정리했습니다. 분석 대상은 <b>타깃 고객인 10~20대(14~29세)</b>이며, 취향과 My R 의견은 <b>레미제라블 팬(원작 소설을 읽은 사람)</b>과 <b>비팬</b>으로 나눠 보여줍니다.</p>
+    <div class="toolbar">
+      <button id="reload" type="button">↻ 최신 응답 다시 불러오기</button>
+      <button id="theme" type="button">◐ 다크/라이트</button>
+      <label class="btn" for="file">CSV 파일로 보기</label>
+      <input id="file" type="file" accept=".csv,text/csv" hidden>
+      <span class="status" id="status"></span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="목차"><div class="wrap">
+  <a href="#overview">응답자 개요</a>
+  <a href="#hypo">가설 검증</a>
+  <a href="#taste">취향 (팬 vs 비팬)</a>
+  <a href="#opinion">My R 의견 (팬 vs 비팬)</a>
+  <a href="#apply">My R 적용 제안</a>
+  <a href="#comments" id="nav-comments">자유 의견</a>
+</div></nav>
+
+<main class="wrap" id="app"><div class="loading">응답을 불러오는 중입니다…</div></main>
+
+<footer class="wrap">
+  응답 데이터는 페이지를 열거나 새로고침할 때마다 구글 시트에서 새로 불러옵니다. 분석 문장은 정해진 규칙에 따라 자동으로 만들어지며, 응답 수가 적은 그룹은 해석에 주의가 필요합니다.
+</footer>
+
+<div id="tip" role="tooltip"></div>
+
+<script src="analysis.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var pct = function (a, b) { return b ? Math.round((a / b) * 100) : 0; };
+
+  /* ---------- 테마 ---------- */
+  try { var saved = localStorage.getItem("myr-theme"); if (saved) document.documentElement.dataset.theme = saved; } catch (e) {}
+  $("#theme").addEventListener("click", function () {
+    var cur = document.documentElement.dataset.theme;
+    var dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = dark ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("myr-theme", next); } catch (e) {}
+  });
+
+  /* ---------- 데이터 불러오기 ---------- */
+  function urls() {
+    var bust = "&_=" + Date.now(), list = [];
+    if (CONFIG.PUBLISHED_CSV_URL) list.push(CONFIG.PUBLISHED_CSV_URL + (CONFIG.PUBLISHED_CSV_URL.indexOf("?") >= 0 ? bust : "?" + bust.slice(1)));
+    var base = "https://docs.google.com/spreadsheets/d/" + CONFIG.SHEET_ID;
+    list.push(base + "/export?format=csv" + bust);
+    list.push(base + "/gviz/tq?tqx=out:csv" + (CONFIG.SHEET_TAB ? "&sheet=" + encodeURIComponent(CONFIG.SHEET_TAB) : "") + "&headers=1" + bust);
+    return list;
+  }
+  function load() {
+    $("#status").textContent = "불러오는 중…";
+    var list = urls(), i = 0;
+    (function next(lastErr) {
+      if (i >= list.length) return fail(lastErr);
+      var u = list[i++];
+      fetch(u, { cache: "no-store" }).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      }).then(function (t) {
+        if (/^\s*</.test(t)) throw new Error("CSV가 아닌 응답(로그인 페이지 등)");
+        render(t, "구글 시트");
+      }).catch(next);
+    })();
+  }
+  function fail(err) {
+    $("#status").textContent = "";
+    $("#app").innerHTML = '<div class="err"><b>구글 시트에서 응답을 불러오지 못했습니다.</b><br>' +
+      '시트 공유 설정을 <b>‘링크가 있는 모든 사용자 – 뷰어’</b>로 바꾸거나, <b>파일 → 공유 → 웹에 게시 → CSV</b>로 게시한 뒤 그 주소를 index.html의 <code>PUBLISHED_CSV_URL</code>에 넣어 주세요. ' +
+      '지금은 위의 ‘CSV 파일로 보기’ 버튼으로 내려받은 응답 파일을 직접 열 수도 있습니다.<br><small>(' + esc(err && err.message || err) + ')</small></div>';
+  }
+  $("#reload").addEventListener("click", load);
+  $("#file").addEventListener("change", function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    f.text().then(function (t) { render(t, "업로드한 파일 (" + f.name + ")"); });
+  });
+
+  /* ---------- 렌더링 ---------- */
+  var R;
+  function render(csv, src) {
+    try { R = MyRAnalysis.analyze(csv); }
+    catch (e) { return fail(e); }
+    var now = new Date();
+    $("#status").textContent = src + " · " + now.toLocaleString("ko-KR") + " 기준";
+    var c = R.counts, h = "";
+
+    // 개요
+    h += '<section id="overview"><h2>응답자 개요</h2><p class="sec-desc">전체 응답 중 타깃(10~20대)만 분석에 사용합니다. 레미제라블 팬은 ‘원작 소설(빅토르 위고)을 읽어봤다’에 체크한 사람입니다.</p>';
+    h += '<div class="kpis">' +
+      kpi("전체 응답", c.total, "명", Object.keys(c.langs).map(function (k) { return k + " " + c.langs[k]; }).join(" · ")) +
+      kpi("분석 대상 (10~20대)", c.target, "명", "제외 " + c.excluded + "명 (14세 미만·30세 이상)") +
+      kpi('<span class="swatch sw1"></span>레미제라블 팬', c.fans, "명", "타깃의 " + pct(c.fans, c.target) + "%" + (c.fans < 10 ? " · 표본 적음" : "")) +
+      kpi('<span class="swatch sw2"></span>비팬', c.non, "명", "타깃의 " + pct(c.non, c.target) + "%" + (c.non < 10 ? " · 표본 적음" : "")) +
+      '</div>';
+    h += '<div class="grid2" style="margin-top:14px">' + R.profile.map(card).join("") + '</div></section>';
+
+    // 가설
+    h += '<section id="hypo"><h2>가설 검증</h2><p class="sec-desc">설문 설계 때 세운 가설을 타깃 응답으로 확인한 결과입니다.</p><div class="card">';
+    h += R.hypotheses.map(function (x, i) {
+      var cls = /^지지|일치/.test(x.verdict) ? "b-good" : /부분/.test(x.verdict) ? "b-warn" : /기각|차이/.test(x.verdict) ? "b-bad" : "b-info";
+      var ico = cls === "b-good" ? "✓" : cls === "b-warn" ? "◐" : cls === "b-bad" ? "✕" : "…";
+      return '<div class="hyp"' + (i ? ' style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px"' : "") + '><div class="id">' + x.id + '</div><div><div class="name">' + esc(x.name) + '</div><div class="txt">' + esc(x.text) + '</div></div><span class="badge ' + cls + '">' + ico + " " + esc(x.verdict) + "</span></div>";
+    }).join("");
+    h += "</div></section>";
+
+    // 취향
+    h += '<section id="taste"><h2>취향 (레미제라블 팬 vs 비팬)</h2><p class="sec-desc">My R 소개를 보기 전, 평소 스토리 게임 취향을 물은 문항입니다. 막대는 각 그룹 안에서 그 보기를 고른 사람의 비율입니다.' + groupNote() + '</p>';
+    h += R.taste.map(card).join("") + "</section>";
+
+    // 의견
+    h += '<section id="opinion"><h2>My R 의견 (레미제라블 팬 vs 비팬)</h2><p class="sec-desc">My R 소개를 본 뒤의 반응입니다.' + groupNote() + '</p>';
+    h += R.opinion.map(card).join("") + "</section>";
+
+    // 적용 제안
+    h += '<section id="apply"><h2>My R 적용 제안</h2><p class="sec-desc">응답 결과를 바탕으로 규칙에 따라 자동 생성한 제안입니다. 응답이 늘어나면 내용도 바뀝니다.</p>';
+    h += R.suggestions.map(function (s) { return '<div class="card sugg"><h3>' + esc(s.t) + "</h3><p>" + esc(s.p) + "</p></div>"; }).join("");
+    h += "</section>";
+
+    // 자유 의견
+    if (CONFIG.SHOW_COMMENTS) {
+      var cm = R.comments.filter(function (x) { return x.target; });
+      h += '<section id="comments"><h2>자유 의견</h2><p class="sec-desc">타깃 응답자가 남긴 의견 ' + cm.length + '개입니다. 파란 줄은 레미제라블 팬, 주황 줄은 비팬입니다.</p><div class="card">';
+      h += cm.length ? cm.map(function (x) {
+        return '<div class="cm ' + (x.fan ? "fan" : "non") + '"><span class="tag">' + (x.fan ? "레미제라블 팬" : "비팬") + (x.lang !== "한국어" ? " · " + esc(x.lang) : "") + "</span>" + esc(x.text) + "</div>";
+      }).join("") : '<p class="meta">아직 의견이 없습니다.</p>';
+      h += "</div></section>";
+    } else { var n = $("#nav-comments"); if (n) n.style.display = "none"; }
+
+    $("#app").innerHTML = h;
+    bindTips();
+  }
+  function groupNote() {
+    var s = "";
+    if (R.counts.fans < 10 || R.counts.non < 10) s = " 한 그룹의 응답이 10명 미만이면 비율이 크게 흔들릴 수 있으니 참고만 하세요.";
+    return s;
+  }
+  function kpi(k, v, unit, d) {
+    return '<div class="kpi"><div class="k">' + k + '</div><div class="v">' + v + "<small>" + unit + '</small></div><div class="d">' + esc(d) + "</div></div>";
+  }
+
+  var QNUM = { q3: "Q3", q31: "Q3-1", q4: "Q4", q5: "Q5", q6: "Q6", q7: "Q7", q8: "Q8", q9: "Q9", q10: "Q10", q11: "Q11", q12: "Q12", q13: "Q13", q14: "Q14", q15: "Q15", q16: "Q16", q17: "Q17", q18: "Q18", q19: "Q19", q20: "Q20", q21: "Q21", q22: "Q22" };
+
+  function card(b) {
+    var split = b.split, rows = [], i;
+    var series = split ? [{ k: "fan", name: "레미제라블 팬", cls: "s1", sw: "sw1" }, { k: "non", name: "비팬", cls: "s2", sw: "sw2" }]
+                       : [{ k: "all", name: "타깃 전체", cls: "s1", sw: "sw1" }];
+    var labels = b.type === "scale" ? ["1", "2", "3", "4", "5"] : b.labels;
+    for (i = 0; i < labels.length; i++) rows.push(i);
+    if (b.type === "multi") { // 많이 고른 순으로 정렬 (색은 그룹을 따름, 순위와 무관)
+      rows.sort(function (x, y) { return (b.all.counts[y] - b.all.counts[x]) || x - y; });
+    }
+    var h = '<div class="card"><h3><span class="qid">' + (QNUM[b.key] || "") + "</span>" + esc(b.title) + "</h3>";
+    h += '<div class="meta">' + series.map(function (s) { return s.name + " " + b[s.k].total + "명"; }).join(" · ") + (b.type === "multi" ? " · 복수 선택" : "") + "</div>";
+    if (b.type === "scale") {
+      h += '<div class="mean-line">' + series.map(function (s) { return '<span><span class="swatch ' + s.sw + '"></span> 평균 <strong>' + (b[s.k].mean === null ? "-" : b[s.k].mean.toFixed(2)) + "</strong></span>"; }).join("") + "</div>";
+    }
+    if (split) h += '<div class="legend">' + series.map(function (s) { return '<span><span class="swatch ' + s.sw + '"></span>' + s.name + "</span>"; }).join("") + "</div>";
+    h += '<div class="chart">';
+    rows.forEach(function (i) {
+      var lab = labels[i];
+      var data = series.map(function (s) { var a = b[s.k]; return { name: s.name, sw: s.sw, cls: s.cls, c: a.counts[i], n: a.total, p: pct(a.counts[i], a.total) }; });
+      var tip = JSON.stringify({ t: (b.type === "scale" ? lab + "점" : b.meta && OPTFULL(b, i)), d: data.map(function (x) { return [x.sw, x.name, x.c, x.n, x.p]; }) });
+      h += '<div class="row" tabindex="0" data-tip="' + esc(tip) + '"><div class="lab">' + esc(b.type === "scale" ? lab + "점" : lab) + '</div><div class="bars track">';
+      data.forEach(function (x) { h += '<div class="bar"><i class="' + x.cls + '" style="width:' + (x.p * 0.86) + '%"></i><b>' + x.p + "%</b></div>"; });
+      h += "</div></div>";
+    });
+    h += "</div>";
+    if (b.type === "scale" && b.meta) h += '<div class="scale-ends"><span>1 = ' + esc(b.meta.lo) + "</span><span>5 = " + esc(b.meta.hi) + "</span></div>";
+    var oth = [].concat(split ? b.fan.other || [] : b.all.other || [], split ? b.non.other || [] : []);
+    if (oth.length) h += '<div class="others">기타 직접 입력: ' + oth.map(function (o) { return "“" + esc(o) + "”"; }).join(", ") + "</div>";
+    // 표
+    h += '<details class="tbl"><summary>표로 보기</summary><table><thead><tr><th>보기</th>' + series.map(function (s) { return "<th>" + s.name + "</th>"; }).join("") + "</tr></thead><tbody>";
+    rows.forEach(function (i) {
+      h += "<tr><td>" + esc(b.type === "scale" ? labels[i] + "점" : labels[i]) + "</td>" + series.map(function (s) { var a = b[s.k]; return "<td>" + a.counts[i] + "명 (" + pct(a.counts[i], a.total) + "%)</td>"; }).join("") + "</tr>";
+    });
+    h += "</tbody></table></details>";
+    h += '<div class="narr">' + b.text.map(function (t) { return "<p>" + esc(t) + "</p>"; }).join("") + "</div>";
+    return h + "</div>";
+  }
+  function OPTFULL(b, i) { return b.labels[i]; }
+
+  /* ---------- 툴팁 ---------- */
+  function bindTips() {
+    var tip = $("#tip");
+    function show(el, x, y) {
+      var d = JSON.parse(el.getAttribute("data-tip"));
+      tip.innerHTML = '<div class="t">' + esc(d.t) + "</div>" + d.d.map(function (r) {
+        return '<div class="l"><span class="swatch ' + r[0] + '"></span>' + esc(r[1]) + ": " + r[2] + "/" + r[3] + "명 (" + r[4] + "%)</div>";
+      }).join("");
+      tip.style.display = "block";
+      var w = tip.offsetWidth, hh = tip.offsetHeight;
+      tip.style.left = Math.min(x + 14, innerWidth - w - 8) + "px";
+      tip.style.top = (y + 14 + hh > innerHeight ? y - hh - 10 : y + 14) + "px";
+    }
+    document.querySelectorAll(".row[data-tip]").forEach(function (el) {
+      el.addEventListener("mousemove", function (e) { show(el, e.clientX, e.clientY); });
+      el.addEventListener("mouseleave", function () { tip.style.display = "none"; });
+      el.addEventListener("focus", function () { var r = el.getBoundingClientRect(); show(el, r.left + 40, r.bottom - 6); });
+      el.addEventListener("blur", function () { tip.style.display = "none"; });
+    });
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
