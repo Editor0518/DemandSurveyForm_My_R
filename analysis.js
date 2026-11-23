@@ -478,9 +478,32 @@
   // ---------- 가설 검증 ----------
   function hypotheses(target, older, fans, non) {
     var H = [], a, b, v;
+    // H1: 타깃 안에서 4~5점 비율로 판정 (평균은 참고), 나이대별 세부 표 제공
     var t10 = countScale(target, "q10"), o10 = countScale(older, "q10");
-    H.push({ id: "H1", name: "핵심 고객은 10~20대 스토리 게임 유저다", verdict: o10.total < 5 ? "판단 보류" : (t10.mean >= o10.mean ? "지지" : "기각"),
-      text: "10~20대의 My R 관심도 평균은 " + f1(t10.mean) + "점" + (o10.total ? ", 30세 이상은 " + f1(o10.mean) + "점(" + o10.total + "명)" : ", 30세 이상 응답은 없어 비교할 수 없습니다") + "." + (o10.total && o10.total < 5 ? " 비교 그룹이 5명 미만이라 판단을 보류합니다. 다만 타깃의 관심도 자체는 " + scaleWord(t10.mean) + "입니다." : "") });
+    function medianOf(rs) {
+      var v = rs.map(function (r) { return r.q10; }).filter(function (x) { return typeof x === "number"; }).sort(function (x, y) { return x - y; });
+      var n = v.length; return n ? (n % 2 ? v[(n - 1) / 2] : (v[n / 2 - 1] + v[n / 2]) / 2) : null;
+    }
+    function ageRow(name, rs) {
+      var c = countScale(rs, "q10");
+      return { name: name, n: c.total, counts: c.counts, mean: c.mean, median: medianOf(rs), top2: c.total ? posNeg(c).pos : null };
+    }
+    var detail = TARGET_AGES.map(function (a) {
+      return ageRow(a, target.filter(function (r) { return OPT.age[0][r.age] === a; }));
+    }).filter(function (d) { return d.n > 0; });
+    var tRow = ageRow("10~20대 전체", target), oRow = ageRow("30세 이상", older);
+    var top2 = tRow.top2;
+    var h1 = [];
+    h1.push("10~20대 " + t10.total + "명 중 My R 관심도 4~5점 비율은 " + (top2 === null ? "-" : top2 + "%") + "(기준 60%)이고, 평균 " + f1(t10.mean) + "점, 중앙값 " + (tRow.median === null ? "-" : tRow.median) + "점입니다.");
+    var big = detail.filter(function (d) { return d.n >= 5; }).sort(function (x, y) { return y.top2 - x.top2 || y.n - x.n; });
+    if (big.length >= 2) h1.push("응답 5명 이상인 나이대 중에서는 " + big[0].name + "의 4~5점 비율이 " + big[0].top2 + "%로 가장 높고, " + J(big[big.length - 1].name, "이", "가") + " " + big[big.length - 1].top2 + "%로 가장 낮습니다.");
+    else h1.push("나이대별로 나누면 응답 5명 이상인 구간이 " + big.length + "개뿐이라 세부 비교는 아직 어렵습니다.");
+    if (oRow.n >= 10) h1.push("참고로 30세 이상(" + oRow.n + "명)의 4~5점 비율은 " + oRow.top2 + "%입니다." + (oRow.top2 > top2 + 15 ? " 30세 이상의 관심도도 높으므로 2차 타깃으로 검토할 만합니다." : ""));
+    else if (oRow.n) h1.push("30세 이상은 " + oRow.n + "명뿐이라 비교에 쓰지 않았습니다(10명 이상일 때 참고용으로 표시).");
+    h1.push("응답자 대부분이 10~20대인 것은 배포 채널(트위터·에브리타임·학생 커뮤니티) 때문이므로, 응답자 비율 자체는 수요의 근거로 쓰지 않았습니다.");
+    H.push({ id: "H1", name: "핵심 고객은 10~20대 스토리 게임 유저다",
+      verdict: top2 === null ? "판단 보류" : top2 >= 60 ? "지지" : top2 >= 40 ? "부분 지지" : "기각",
+      text: h1.join(" "), table: detail.concat([tRow], oRow.n ? [oRow] : []) });
     a = countScale(target, "q11"); b = countScale(non, "q11");
     var pa = posNeg(a), pb = posNeg(b);
     H.push({ id: "H2", name: "'알코올중독×혁명' 소재에 거부감보다 흥미를 더 느낀다", verdict: pa.pos > pa.neg && pb.pos > pb.neg ? "지지" : pa.pos > pa.neg ? "부분 지지" : "기각",

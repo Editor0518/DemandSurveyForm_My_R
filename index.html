@@ -183,7 +183,7 @@ var CONFIG = {
   // 시트 탭 이름 (비워두면 첫 번째 탭)
   SHEET_TAB: "",
   // 자유 의견을 사이트에 보여줄지 여부 (공개 사이트이므로 주의)
-  SHOW_COMMENTS: false
+  SHOW_COMMENTS: true
 };
 </script>
 
@@ -303,7 +303,7 @@ var CONFIG = {
     h += R.hypotheses.map(function (x, i) {
       var cls = /^지지|일치/.test(x.verdict) ? "b-good" : /부분/.test(x.verdict) ? "b-warn" : /기각|차이/.test(x.verdict) ? "b-bad" : "b-info";
       var ico = cls === "b-good" ? "✓" : cls === "b-warn" ? "◐" : cls === "b-bad" ? "✕" : "…";
-      return '<div class="hyp"' + (i ? ' style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px"' : "") + '><div class="id">' + x.id + '</div><div><div class="name">' + esc(x.name) + '</div><div class="txt">' + esc(x.text) + '</div></div><span class="badge ' + cls + '">' + ico + " " + esc(x.verdict) + "</span></div>";
+      return '<div class="hyp"' + (i ? ' style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px"' : "") + '><div class="id">' + x.id + '</div><div><div class="name">' + esc(x.name) + '</div><div class="txt">' + esc(x.text) + '</div>' + (x.table ? ageTable(x.table) : "") + '</div><span class="badge ' + cls + '">' + ico + " " + esc(x.verdict) + "</span></div>";
     }).join("");
     h += "</div></section>";
 
@@ -339,6 +339,13 @@ var CONFIG = {
         $("#region-body").innerHTML = regionBody();
       });
     });
+  }
+  function ageTable(rows) {
+    return '<details class="tbl" open><summary>나이대별 관심도(Q10) 보기</summary><table><thead><tr><th>나이대</th><th>인원</th><th>점수별 인원 (1·2·3·4·5점)</th><th>평균</th><th>중앙값</th><th>4~5점 비율</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var strong = r.name === "10~20대 전체", dim = r.name === "30세 이상";
+        return '<tr' + (strong ? ' style="font-weight:700"' : dim ? ' style="color:var(--text-muted)"' : "") + "><td>" + esc(r.name) + (r.n < 5 && !strong ? ' <span class="badge b-info" style="font-size:10px;padding:1px 6px">표본 적음</span>' : "") + "</td><td>" + r.n + "명</td><td>" + r.counts.join(" · ") + "</td><td>" + (r.mean === null ? "-" : r.mean.toFixed(2)) + "</td><td>" + (r.median === null ? "-" : r.median) + "</td><td>" + (r.top2 === null ? "-" : r.top2 + "%") + "</td></tr>";
+      }).join("") + "</tbody></table></details>";
   }
   var RS = "all";
   function regionBody() {
