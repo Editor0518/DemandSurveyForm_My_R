@@ -546,6 +546,58 @@
     return S;
   }
 
+  // ---------- 국가(응답 언어)·권역별 ----------
+  var LANG_PLACE = { "한국어": "한국", "English": "영어권", "日本語": "일본", "简体中文": "중화권", "Español": "스페인어권", "Français": "프랑스어권" };
+  var REGION_DEF = [
+    { name: "아시아권", note: "한국어·日本語·简体中文", langs: ["한국어", "日本語", "简体中文"] },
+    { name: "서구권", note: "English·Español·Français", langs: ["English", "Español", "Français"] },
+    { name: "해외 전체", note: "한국어 외 모든 언어", langs: ["English", "日本語", "简体中文", "Español", "Français"] }
+  ];
+  function groupStats(rs, isFan) {
+    var q10 = countScale(rs, "q10"), q11 = countScale(rs, "q11"), q19 = countScale(rs, "q19");
+    var q20 = countSingle(rs, "q20"), q14 = countSingle(rs, "q14"), q12 = countMulti(rs, "q12"), q13 = countMulti(rs, "q13");
+    var est = 0; q20.counts.forEach(function (c, i) { est += c * PRICE_MID[i]; });
+    var t12 = ranked("q12", q12, [11])[0], t13 = ranked("q13", q13, [8])[0];
+    return {
+      n: rs.length, fans: rs.filter(isFan).length,
+      q10: q10.mean, q11pos: q11.total ? posNeg(q11).pos : null, q19pos: q19.total ? posNeg(q19).pos : null,
+      q14up: q14.total ? pct(q14.counts[0] + q14.counts[1], q14.total) : null,
+      price: q20.total ? Math.round(est / q20.total / 100) * 100 : null,
+      appeal: t12 ? t12.name : (q12.total ? "없음" : null), hesitate: t13 ? t13.name : (q13.total ? "없음" : null)
+    };
+  }
+  function regionStats(rs, isFan) {
+    var rows = [];
+    LANGS.forEach(function (l) {
+      var sub = rs.filter(function (r) { return r.lang === l; });
+      if (sub.length) rows.push(Object.assign({ kind: "lang", name: LANG_PLACE[l], note: l }, groupStats(sub, isFan)));
+    });
+    var regions = [];
+    REGION_DEF.forEach(function (g) {
+      var present = g.langs.filter(function (l) { return rs.some(function (r) { return r.lang === l; }); });
+      if (present.length < 2) return; // 0명이거나 한 언어뿐이면 위 표와 같으므로 생략
+      var sub = rs.filter(function (r) { return g.langs.indexOf(r.lang) >= 0; });
+      regions.push(Object.assign({ kind: "region", name: g.name, note: present.join("·") }, groupStats(sub, isFan)));
+    });
+    // 해설 문장
+    var text = [], total = rs.length;
+    if (!total) return { rows: rows, regions: regions, text: ["응답이 없습니다."] };
+    var ko = rows.filter(function (r) { return r.note === "한국어"; })[0];
+    var ov = rs.filter(function (r) { return r.lang !== "한국어"; });
+    text.push("응답 언어는 " + rows.map(function (r) { return r.name + " " + r.n + "명(" + pct(r.n, total) + "%)"; }).join(", ") + "입니다.");
+    if (ov.length) {
+      var o = groupStats(ov, isFan);
+      text.push("해외 응답 " + ov.length + "명의 My R 관심도 평균은 " + f1(o.q10) + "점, 구매 의향(4~5점)은 " + (o.q19pos === null ? "-" : o.q19pos + "%") +
+        (ko ? "이며, 한국 응답(관심도 " + f1(ko.q10) + "점, 구매 의향 " + (ko.q19pos === null ? "-" : ko.q19pos + "%") + ")과 비교할 수 있습니다." : "입니다."));
+      if (ov.length < 10) text.push("해외 응답이 " + ov.length + "명뿐이라 국가별 차이를 결론 내리기는 이릅니다. 킥스타터·스팀 해외 출시를 판단하려면 해외 커뮤니티에 설문을 더 배포해 최소 10~20명 이상을 모으는 것이 좋습니다.");
+      else {
+        var d = (o.q10 || 0) - (ko && ko.q10 || 0);
+        text.push(Math.abs(d) < 0.3 ? "해외와 한국의 관심도가 비슷하므로, 해외 출시(킥스타터·스팀 다국어)도 국내와 같은 강도로 준비할 만합니다." : d > 0 ? "해외 관심도가 한국보다 높습니다. 다국어 지원과 킥스타터 펀딩의 우선순위를 높일 근거가 됩니다." : "해외 관심도가 한국보다 낮습니다. 국내 출시를 먼저 안정시키고, 해외는 데모·트레일러로 반응을 본 뒤 확장하는 순서가 안전합니다.");
+      }
+    } else text.push("아직 해외 응답이 없습니다.");
+    return { rows: rows, regions: regions, text: text };
+  }
+
   // ---------- 전체 분석 ----------
   function analyze(csvText) {
     var rows = parseCSV(csvText);
@@ -569,6 +621,7 @@
           all: ALL, fan: F, non: N, text: text };
       });
     }
+    var regions = { all: regionStats(recs, isFan), target: regionStats(target, isFan) };
     var comments = recs.filter(function (r) { return r.q23; }).map(function (r) { return { lang: r.lang, text: r.q23, fan: isFan(r), target: isTarget(r) }; });
     var langCount = {}; recs.forEach(function (r) { langCount[r.lang] = (langCount[r.lang] || 0) + 1; });
     return {
@@ -579,6 +632,7 @@
       opinion: block(["q10", "q11", "q12", "q13", "q14", "q15", "q16", "q17", "q18", "q19", "q20", "q21", "q22"], true),
       hypotheses: hypotheses(target, older, fans, non),
       suggestions: suggestions(target, fans, non),
+      regions: regions,
       comments: comments
     };
   }
