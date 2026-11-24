@@ -69,7 +69,13 @@ button:hover, .btn:hover { background: var(--surface-2); }
 
 /* 내비 */
 nav.tabs { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--border); }
-nav.tabs .wrap { display: flex; gap: 4px; overflow-x: auto; padding-top: 8px; padding-bottom: 8px; }
+nav.tabs .navrow { display: flex; align-items: center; gap: 10px; padding-top: 8px; padding-bottom: 8px; }
+nav.tabs .links { display: flex; gap: 4px; overflow-x: auto; flex: 1; min-width: 0; }
+.pick { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); flex: none; }
+.pick select { font: inherit; font-size: 13px; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--series-1); border-radius: 8px; padding: 5px 8px; max-width: 230px; }
+@media (max-width: 720px) { nav.tabs .navrow { flex-direction: column; align-items: stretch; gap: 6px; } .pick select { flex: 1; max-width: none; } }
+.vlabel { font-size: 15px; font-weight: 600; color: var(--text-muted); }
+.vlabel.on { color: var(--series-1); }
 nav.tabs a { white-space: nowrap; text-decoration: none; color: var(--text-secondary); font-size: 14px; padding: 6px 12px; border-radius: 999px; }
 nav.tabs a:hover { background: var(--surface-2); color: var(--text-primary); }
 
@@ -202,7 +208,7 @@ var CONFIG = {
   </div>
 </header>
 
-<nav class="tabs" aria-label="목차"><div class="wrap">
+<nav class="tabs" aria-label="목차"><div class="wrap navrow"><div class="links">
   <a href="#region">국가·권역별</a>
   <a href="#overview">응답자 개요</a>
   <a href="#hypo">가설 검증</a>
@@ -210,6 +216,8 @@ var CONFIG = {
   <a href="#opinion">My R 의견 (팬 vs 비팬)</a>
   <a href="#apply">My R 적용 제안</a>
   <a href="#comments" id="nav-comments">자유 의견</a>
+</div>
+<label class="pick" id="pickwrap" hidden><span>보기 대상</span><select id="pick" aria-label="개요·취향·의견을 볼 대상 선택"></select></label>
 </div></nav>
 
 <main class="wrap" id="app"><div class="loading">응답을 불러오는 중입니다…</div></main>
@@ -288,18 +296,11 @@ var CONFIG = {
       '<div class="seg" role="group" aria-label="집계 범위"><button type="button" data-rs="all"' + (RS === "all" ? ' aria-pressed="true"' : "") + '>전체 응답</button><button type="button" data-rs="target"' + (RS === "target" ? ' aria-pressed="true"' : "") + '>10~20대만</button></div>' +
       '<div id="region-body">' + regionBody() + "</div></section>";
 
-    // 개요
-    h += '<section id="overview"><h2>응답자 개요</h2><p class="sec-desc">전체 응답 중 타깃(10~20대)만 분석에 사용합니다. 레미제라블 팬은 ‘원작 소설(빅토르 위고)을 읽어봤다’에 체크한 사람입니다.</p>';
-    h += '<div class="kpis">' +
-      kpi("전체 응답", c.total, "명", Object.keys(c.langs).map(function (k) { return k + " " + c.langs[k]; }).join(" · ")) +
-      kpi("분석 대상 (10~20대)", c.target, "명", "제외 " + c.excluded + "명 (14세 미만·30세 이상)") +
-      kpi('<span class="swatch sw1"></span>레미제라블 팬', c.fans, "명", "타깃의 " + pct(c.fans, c.target) + "%" + (c.fans < 10 ? " · 표본 적음" : "")) +
-      kpi('<span class="swatch sw2"></span>비팬', c.non, "명", "타깃의 " + pct(c.non, c.target) + "%" + (c.non < 10 ? " · 표본 적음" : "")) +
-      '</div>';
-    h += '<div class="grid2" style="margin-top:14px">' + R.profile.map(card).join("") + '</div></section>';
+    // 개요 (드롭다운 선택 대상)
+    h += '<section id="overview"><h2>응답자 개요 <span class="vlabel"></span></h2><p class="sec-desc">위쪽 <b>보기 대상</b> 드롭다운으로 연령대·국가를 바꿔 볼 수 있습니다(기본: 10~20대 전체). 레미제라블 팬은 ‘원작 소설(빅토르 위고)을 읽어봤다’에 체크한 사람입니다.</p><div id="v-overview"></div></section>';
 
-    // 가설
-    h += '<section id="hypo"><h2>가설 검증</h2><p class="sec-desc">설문 설계 때 세운 가설을 타깃 응답으로 확인한 결과입니다.</p><div class="card">';
+    // 가설 (10~20대 고정)
+    h += '<section id="hypo"><h2>가설 검증</h2><p class="sec-desc">설문 설계 때 세운 가설을 타깃(10~20대) 응답으로 확인한 결과입니다. 보기 대상 드롭다운과 관계없이 항상 10~20대 기준입니다.</p><div class="card">';
     h += R.hypotheses.map(function (x, i) {
       var cls = /^지지|일치/.test(x.verdict) ? "b-good" : /부분/.test(x.verdict) ? "b-warn" : /기각|차이/.test(x.verdict) ? "b-bad" : "b-info";
       var ico = cls === "b-good" ? "✓" : cls === "b-warn" ? "◐" : cls === "b-bad" ? "✕" : "…";
@@ -307,16 +308,12 @@ var CONFIG = {
     }).join("");
     h += "</div></section>";
 
-    // 취향
-    h += '<section id="taste"><h2>취향 (레미제라블 팬 vs 비팬)</h2><p class="sec-desc">My R 소개를 보기 전, 평소 스토리 게임 취향을 물은 문항입니다. 막대는 각 그룹 안에서 그 보기를 고른 사람의 비율입니다.' + groupNote() + '</p>';
-    h += R.taste.map(card).join("") + "</section>";
-
-    // 의견
-    h += '<section id="opinion"><h2>My R 의견 (레미제라블 팬 vs 비팬)</h2><p class="sec-desc">My R 소개를 본 뒤의 반응입니다.' + groupNote() + '</p>';
-    h += R.opinion.map(card).join("") + "</section>";
+    // 취향·의견 (드롭다운 선택 대상)
+    h += '<section id="taste"><h2>취향 (레미제라블 팬 vs 비팬) <span class="vlabel"></span></h2><p class="sec-desc">My R 소개를 보기 전, 평소 스토리 게임 취향을 물은 문항입니다. 막대는 각 그룹 안에서 그 보기를 고른 사람의 비율입니다.<span class="vnote"></span></p><div id="v-taste"></div></section>';
+    h += '<section id="opinion"><h2>My R 의견 (레미제라블 팬 vs 비팬) <span class="vlabel"></span></h2><p class="sec-desc">My R 소개를 본 뒤의 반응입니다.<span class="vnote"></span></p><div id="v-opinion"></div></section>';
 
     // 적용 제안
-    h += '<section id="apply"><h2>My R 적용 제안</h2><p class="sec-desc">응답 결과를 바탕으로 규칙에 따라 자동 생성한 제안입니다. 응답이 늘어나면 내용도 바뀝니다.</p>';
+    h += '<section id="apply"><h2>My R 적용 제안</h2><p class="sec-desc">타깃(10~20대) 응답을 바탕으로 규칙에 따라 자동 생성한 제안입니다. 응답이 늘어나면 내용도 바뀝니다.</p>';
     h += R.suggestions.map(function (s) { return '<div class="card sugg"><h3>' + esc(s.t) + "</h3><p>" + esc(s.p) + "</p></div>"; }).join("");
     h += "</section>";
 
@@ -331,6 +328,8 @@ var CONFIG = {
     } else { var n = $("#nav-comments"); if (n) n.style.display = "none"; }
 
     $("#app").innerHTML = h;
+    buildPicker();
+    renderView(VIEW);
     bindTips();
     document.querySelectorAll(".seg button").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -366,10 +365,43 @@ var CONFIG = {
     h += '<div class="narr">' + D.text.map(function (t) { return "<p>" + esc(t) + "</p>"; }).join("") + "</div></div>";
     return h;
   }
-  function groupNote() {
-    var s = "";
-    if (R.counts.fans < 10 || R.counts.non < 10) s = " 한 그룹의 응답이 10명 미만이면 비율이 크게 흔들릴 수 있으니 참고만 하세요.";
-    return s;
+  /* ---------- 보기 대상 드롭다운 ---------- */
+  var VIEW = "target";
+  try { var sv = sessionStorage.getItem("myr-view"); if (sv) VIEW = sv; } catch (e) {}
+  function buildPicker() {
+    var sel = $("#pick"), groups = {}, order = [];
+    R.views.forEach(function (v) { if (!groups[v.group]) { groups[v.group] = []; order.push(v.group); } groups[v.group].push(v); });
+    if (!R.views.some(function (v) { return v.id === VIEW; })) VIEW = "target";
+    sel.innerHTML = order.map(function (g) {
+      return '<optgroup label="' + esc(g) + '">' + groups[g].map(function (v) {
+        return '<option value="' + v.id + '"' + (v.id === VIEW ? " selected" : "") + ">" + esc(v.label) + " · " + v.n + "명" + (v.id === "target" ? " (기본)" : "") + "</option>";
+      }).join("") + "</optgroup>";
+    }).join("");
+    $("#pickwrap").hidden = false;
+  }
+  $("#pick").addEventListener("change", function (e) {
+    VIEW = e.target.value;
+    try { sessionStorage.setItem("myr-view", VIEW); } catch (err) {}
+    renderView(VIEW); bindTips();
+  });
+  function renderView(id) {
+    var V = R.view(id), c = V.counts;
+    document.querySelectorAll(".vlabel").forEach(function (el) { el.textContent = "· " + V.label; el.classList.toggle("on", id !== "target"); });
+    var note = "";
+    if (V.single === "allfan") note = " 이 대상은 모두 레미제라블 팬이라 팬/비팬을 나누지 않고 하나로 보여줍니다.";
+    else if (V.single === "nofan") note = " 이 대상에는 레미제라블 팬이 없어 팬/비팬을 나누지 않고 하나로 보여줍니다.";
+    else if (c.fans < 10 || c.non < 10) note = " 한 그룹의 응답이 10명 미만이면 비율이 크게 흔들릴 수 있으니 참고만 하세요.";
+    if (c.n < 5) note += " 선택한 대상의 응답이 " + c.n + "명뿐이라 결과는 참고용입니다.";
+    document.querySelectorAll(".vnote").forEach(function (el) { el.textContent = note; });
+    var tc = R.counts;
+    $("#v-overview").innerHTML = '<div class="kpis">' +
+      kpi("전체 응답", tc.total, "명", Object.keys(tc.langs).map(function (k) { return k + " " + tc.langs[k]; }).join(" · ")) +
+      kpi("보기 대상 · " + esc(V.label), c.n, "명", "전체의 " + pct(c.n, tc.total) + "%" + (id === "target" ? " · 제외 " + tc.excluded + "명 (14세 미만·30세 이상)" : "")) +
+      kpi('<span class="swatch sw1"></span>레미제라블 팬', c.fans, "명", "대상의 " + pct(c.fans, c.n) + "%" + (c.fans && c.fans < 10 ? " · 표본 적음" : "")) +
+      kpi('<span class="swatch sw2"></span>비팬', c.non, "명", "대상의 " + pct(c.non, c.n) + "%" + (c.non && c.non < 10 ? " · 표본 적음" : "")) +
+      '</div><div class="grid2" style="margin-top:14px">' + V.profile.map(card).join("") + "</div>";
+    $("#v-taste").innerHTML = V.taste.map(card).join("");
+    $("#v-opinion").innerHTML = V.opinion.map(card).join("");
   }
   function kpi(k, v, unit, d) {
     return '<div class="kpi"><div class="k">' + k + '</div><div class="v">' + v + "<small>" + unit + '</small></div><div class="d">' + esc(d) + "</div></div>";
@@ -380,7 +412,7 @@ var CONFIG = {
   function card(b) {
     var split = b.split, rows = [], i;
     var series = split ? [{ k: "fan", name: "레미제라블 팬", cls: "s1", sw: "sw1" }, { k: "non", name: "비팬", cls: "s2", sw: "sw2" }]
-                       : [{ k: "all", name: "타깃 전체", cls: "s1", sw: "sw1" }];
+                       : [{ k: "all", name: "보기 대상 전체", cls: "s1", sw: "sw1" }];
     var labels = b.type === "scale" ? ["1", "2", "3", "4", "5"] : b.labels;
     for (i = 0; i < labels.length; i++) rows.push(i);
     if (b.type === "multi") { // 많이 고른 순으로 정렬 (색은 그룹을 따름, 순위와 무관)

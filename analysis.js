@@ -337,6 +337,10 @@
   }
   function posNeg(a) { return { pos: pct(a.counts[3] + a.counts[4], a.total), neg: pct(a.counts[0] + a.counts[1], a.total), mid: pct(a.counts[2], a.total) }; }
 
+  // 현재 보고 있는 그룹 이름 (드롭다운 선택에 따라 바뀜)
+  var GL = "타깃 전체", IS_DEFAULT = true;
+  function HYP(t) { return IS_DEFAULT ? t : ""; }
+
   // ---------- 문항별 해석 문장 ----------
   function compareText(key, F, N) {
     var t = QMETA[key].type, s = [];
@@ -359,9 +363,10 @@
   }
 
   function meaningText(key, F, N, ALL) {
-    var s = [];
+    var s = [], both = !!(F && N && F.total > 0 && N.total > 0);
     switch (key) {
       case "q5": {
+        if (!both) { var rA = rankOf("q5", ALL, 11), aA = rankOf("q5", ALL, 3); s.push("My R의 핵심 소재인 '혁명물'은 " + (rA.rank ? rA.rank + "위(" + rA.p + "%)" : "선택 없음") + ", '중독과 회복'은 " + (aA.rank ? aA.rank + "위(" + aA.p + "%)" : "선택 없음") + "입니다."); break; }
         var revF = rankOf("q5", F, 11), revN = rankOf("q5", N, 11), addF = rankOf("q5", F, 3), addN = rankOf("q5", N, 3);
         s.push("My R의 핵심 소재인 '혁명물'은 팬 그룹에서 " + (revF.rank ? revF.rank + "위(" + revF.p + "%)" : "선택 없음") + ", 비팬 그룹에서 " + (revN.rank ? revN.rank + "위(" + revN.p + "%)" : "선택 없음") + "이고, '중독과 회복'은 팬 " + (addF.rank ? addF.rank + "위(" + addF.p + "%)" : "선택 없음") + ", 비팬 " + (addN.rank ? addN.rank + "위(" + addN.p + "%)" : "선택 없음") + "입니다.");
         if (revN.p >= 25 || addN.p >= 25) s.push("팬덤 밖에서도 4명 중 1명 이상이 이 소재를 직접 골랐으므로, 소재 자체가 일반 유저에게도 통할 가능성이 있습니다.");
@@ -371,9 +376,9 @@
       }
       case "q6": {
         var m = ALL.mean;
-        s.push(m === null ? "" : m >= 3.5 ? "전체 평균이 " + f1(m) + "점으로, 사건이 진행되고 목표에 다가가는 전개를 더 선호합니다. 에피소드마다 '그랑테르가 변할 수 있는가'라는 목표에 가까워지는 장면을 분명히 보여주는 것이 중요합니다."
-          : m <= 2.5 ? "전체 평균이 " + f1(m) + "점으로, 캐릭터와의 일상과 관계가 깊어지는 전개를 더 선호합니다. 개그·일상 파트를 줄이기보다 관계 변화가 드러나는 장면으로 채우는 것이 좋습니다."
-          : "전체 평균이 " + f1(m) + "점으로, 일상·관계와 사건 진행을 균형 있게 원합니다. 일상 장면도 목표(금주·혁명)와 연결되도록 배치하면 두 취향을 모두 만족시킬 수 있습니다.");
+        s.push(m === null ? "" : m >= 3.5 ? GL + " 평균이 " + f1(m) + "점으로, 사건이 진행되고 목표에 다가가는 전개를 더 선호합니다. 에피소드마다 '그랑테르가 변할 수 있는가'라는 목표에 가까워지는 장면을 분명히 보여주는 것이 중요합니다."
+          : m <= 2.5 ? GL + " 평균이 " + f1(m) + "점으로, 캐릭터와의 일상과 관계가 깊어지는 전개를 더 선호합니다. 개그·일상 파트를 줄이기보다 관계 변화가 드러나는 장면으로 채우는 것이 좋습니다."
+          : GL + " 평균이 " + f1(m) + "점으로, 일상·관계와 사건 진행을 균형 있게 원합니다. 일상 장면도 목표(금주·혁명)와 연결되도록 배치하면 두 취향을 모두 만족시킬 수 있습니다.");
         break;
       }
       case "q7": {
@@ -390,7 +395,7 @@
           8: "트레일러·데모에서 스토리 톤을 정확히 보여줘 취향이 맞는 사람이 유입되게 하세요.",
           9: "끊어서 해도 흐름이 이어지도록 툴팁·사전으로 등장인물과 설정을 다시 확인할 수 있다는 점을 강조하세요."
         };
-        s.push("전체적으로 그만두는 가장 큰 이유는 " + topList("q7", ALL, 3, [10]) + "입니다.");
+        s.push(GL + "에서 그만두는 가장 큰 이유는 " + topList("q7", ALL, 3, [10]) + "입니다.");
         r.forEach(function (i) { if (tips[i]) s.push(tips[i]); });
         break;
       }
@@ -401,25 +406,27 @@
       }
       case "q10": {
         var pn = posNeg(ALL);
-        s.push("타깃 전체로 보면 4~5점을 준 비율이 " + pn.pos + "%, 1~2점이 " + pn.neg + "%입니다. " + (pn.pos >= 60 ? "소개만으로도 관심을 끄는 힘이 충분합니다." : pn.pos >= 40 ? "관심층이 확실히 존재하지만, 소개 방식을 다듬으면 더 넓힐 여지가 있습니다." : "소개만으로는 관심을 끌기 어려워, 비주얼 자료(트레일러·데모)가 꼭 필요합니다."));
+        s.push(GL + "로 보면 4~5점을 준 비율이 " + pn.pos + "%, 1~2점이 " + pn.neg + "%입니다. " + (pn.pos >= 60 ? "소개만으로도 관심을 끄는 힘이 충분합니다." : pn.pos >= 40 ? "관심층이 확실히 존재하지만, 소개 방식을 다듬으면 더 넓힐 여지가 있습니다." : "소개만으로는 관심을 끌기 어려워, 비주얼 자료(트레일러·데모)가 꼭 필요합니다."));
         break;
       }
       case "q11": {
+        if (!both) { var aa = posNeg(ALL); s.push(GL + "에서 '흥미롭다'(4~5점)는 " + aa.pos + "%, '거부감'(1~2점)은 " + aa.neg + "%입니다."); break; }
         var a = posNeg(ALL), b = posNeg(N);
-        s.push("타깃 전체에서 '흥미롭다'(4~5점)는 " + a.pos + "%, '거부감'(1~2점)은 " + a.neg + "%입니다. 레미제라블 팬이 아닌 응답자만 보면 흥미 " + b.pos + "%, 거부감 " + b.neg + "%입니다.");
-        s.push(b.pos > b.neg ? "팬덤 밖에서도 흥미가 거부감보다 커서, '알코올중독자 × 혁명가'라는 조합은 진입 장벽이 아니라 차별점으로 작동하고 있습니다. (가설 H2 지지)" : "팬덤 밖에서는 거부감이 흥미보다 크거나 비슷합니다. 소재를 전면에 내세우기보다 성장·관계 서사로 먼저 끌어들이는 전략이 필요합니다.");
+        s.push(GL + "에서 '흥미롭다'(4~5점)는 " + a.pos + "%, '거부감'(1~2점)은 " + a.neg + "%입니다. 레미제라블 팬이 아닌 응답자만 보면 흥미 " + b.pos + "%, 거부감 " + b.neg + "%입니다.");
+        s.push(b.pos > b.neg ? "팬덤 밖에서도 흥미가 거부감보다 커서, '알코올중독자 × 혁명가'라는 조합은 진입 장벽이 아니라 차별점으로 작동하고 있습니다." + HYP(" (가설 H2 지지)") : "팬덤 밖에서는 거부감이 흥미보다 크거나 비슷합니다. 소재를 전면에 내세우기보다 성장·관계 서사로 먼저 끌어들이는 전략이 필요합니다.");
         break;
       }
       case "q12": {
-        s.push("타깃 전체에서 가장 끌리는 점은 " + topList("q12", ALL, 3, [11]) + "입니다. 상위 항목을 홍보 문구·트레일러의 첫 장면에 배치하는 것을 추천합니다.");
+        s.push(GL + "에서 가장 끌리는 점은 " + topList("q12", ALL, 3, [11]) + "입니다. 상위 항목을 홍보 문구·트레일러의 첫 장면에 배치하는 것을 추천합니다.");
         break;
       }
       case "q13": {
-        var none = pct(ALL.counts[8], ALL.total);
-        s.push("망설여지는 점이 '없음'이라고 답한 비율은 " + none + "%입니다. 망설임 요인 상위는 " + topList("q13", ALL, 3, [8]) + "입니다.");
+        var none = pct(ALL.counts[8], ALL.total), has13 = ranked("q13", ALL, [8]).length;
+        s.push("망설여지는 점이 '없음'이라고 답한 비율은 " + none + "%입니다. " + (has13 ? "망설임 요인 상위는 " + topList("q13", ALL, 3, [8]) + "입니다." : "다른 망설임 요인을 고른 사람은 없었습니다."));
         break;
       }
       case "q14": {
+        if (!both) { s.push("레미제라블 모티브를 알고 관심이 높아진 비율은 " + pct(ALL.counts[0] + ALL.counts[1], ALL.total) + "%, 낮아진 비율은 " + pct(ALL.counts[3] + ALL.counts[4], ALL.total) + "%입니다."); break; }
         var upF = pct(F.counts[0] + F.counts[1], F.total), upN = pct(N.counts[0] + N.counts[1], N.total), dnN = pct(N.counts[3] + N.counts[4], N.total);
         s.push("레미제라블 모티브를 알고 관심이 높아진 비율은 팬 " + upF + "%, 비팬 " + upN + "%이고, 비팬 중 관심이 낮아진 비율은 " + dnN + "%입니다.");
         s.push(upN >= 30 && dnN < 15 ? "원작을 깊이 모르는 사람에게도 레미제라블은 플러스 요인이므로, 홍보에서 원작 모티브를 밝혀도 좋습니다." : dnN >= 20 ? "비팬 일부에게는 원작 언급이 오히려 부담으로 작용합니다. 일반 홍보에서는 원작을 부제 수준으로만 언급하는 것이 안전합니다." : "비팬에게 원작 언급은 큰 영향을 주지 않습니다. 팬덤 대상 홍보에서만 강조해도 충분합니다.");
@@ -432,7 +439,7 @@
       case "q16": {
         var acc = pct(ALL.counts[0] + ALL.counts[1], ALL.total), hint = pct(ALL.counts[2], ALL.total), avoid = pct(ALL.counts[3], ALL.total);
         s.push("배드엔딩에서 회복 불가·사망 결말을 '오히려 끌린다' 또는 '필요하다면 괜찮다'고 답한 비율은 " + acc + "%, '암시 정도라면 괜찮다'는 " + hint + "%, '피하고 싶다'는 " + avoid + "%입니다.");
-        s.push(acc >= 60 ? "다수가 수용하므로 현재 배드엔딩 구성을 유지해도 됩니다. (가설 H7 지지)" : acc + hint >= 70 ? "수용 의사는 있지만 직접 묘사보다 암시 연출을 선호하는 층이 큽니다. 사망 장면은 암시 위주로 연출하는 것이 안전합니다." : "거부감이 적지 않으므로 콘텐츠 경고와 함께 연출 수위를 낮추는 것을 검토하세요.");
+        s.push(acc >= 60 ? "다수가 수용하므로 현재 배드엔딩 구성을 유지해도 됩니다." + HYP(" (가설 H7 지지)") : acc + hint >= 70 ? "수용 의사는 있지만 직접 묘사보다 암시 연출을 선호하는 층이 큽니다. 사망 장면은 암시 위주로 연출하는 것이 안전합니다." : "거부감이 적지 않으므로 콘텐츠 경고와 함께 연출 수위를 낮추는 것을 검토하세요.");
         break;
       }
       case "q17": {
@@ -447,8 +454,8 @@
         break;
       }
       case "q19": {
-        var pn2 = posNeg(ALL), pnN = posNeg(N);
-        s.push("구매 의향 4~5점 비율은 타깃 전체 " + pn2.pos + "%, 비팬 " + pnN.pos + "%입니다. " + (pn2.pos >= 40 ? "목표 기준(40%)을 넘어 구매로 이어질 가능성이 확인됩니다. (가설 H3 지지)" : "목표 기준(40%)에는 못 미쳐, 데모·트레일러로 구매 전환을 높이는 작업이 필요합니다."));
+        var pn2 = posNeg(ALL), pnN = posNeg(N || ALL);
+        s.push("구매 의향 4~5점 비율은 " + GL + " " + pn2.pos + "%" + (both ? ", 비팬 " + pnN.pos + "%" : "") + "입니다. " + (pn2.pos >= 40 ? "목표 기준(40%)을 넘어 구매로 이어질 가능성이 확인됩니다." + HYP(" (가설 H3 지지)") : "목표 기준(40%)에는 못 미쳐, 데모·트레일러로 구매 전환을 높이는 작업이 필요합니다."));
         break;
       }
       case "q20": {
@@ -625,34 +632,73 @@
   function analyze(csvText) {
     var rows = parseCSV(csvText);
     var recs = normalize(rows);
-    var isTarget = function (r) { return typeof r.age === "number" && TARGET_AGES.indexOf(OPT.age[0][r.age]) >= 0; };
+    var ageName = function (r) { return typeof r.age === "number" ? OPT.age[0][r.age] : null; };
+    var isTarget = function (r) { return TARGET_AGES.indexOf(ageName(r)) >= 0; };
     var target = recs.filter(isTarget);
-    var older = recs.filter(function (r) { return typeof r.age === "number" && OPT.age[0][r.age] === "30세 이상"; });
+    var older = recs.filter(function (r) { return ageName(r) === "30세 이상"; });
     var isFan = function (r) { return r.q9 && r.q9.idx.indexOf(0) >= 0; };
     var fans = target.filter(isFan), non = target.filter(function (r) { return !isFan(r); });
 
-    function block(keys, split) {
+    // ---- 드롭다운 보기 목록 (응답 0명인 항목은 제외) ----
+    var VIEWS = [{ id: "target", group: "연령대", label: "10~20대 전체", gl: "10~20대 전체", filter: isTarget },
+                 { id: "allages", group: "연령대", label: "전체 연령", gl: "전체 연령", filter: function () { return true; } }];
+    OPT.age[0].forEach(function (a, i) {
+      VIEWS.push({ id: "age" + i, group: "연령대", label: a, gl: a + " 응답자", filter: function (r) { return r.age === i; } });
+    });
+    LANGS.forEach(function (l, i) {
+      VIEWS.push({ id: "lang" + i, group: "국가 (응답 언어, 전체 연령)", label: LANG_PLACE[l] + " (" + l + ")", gl: LANG_PLACE[l] + " 응답자", filter: function (r) { return r.lang === l; } });
+    });
+    REGION_DEF.forEach(function (g, i) {
+      var present = g.langs.filter(function (l) { return recs.some(function (r) { return r.lang === l; }); });
+      if (present.length < 2) return;
+      VIEWS.push({ id: "region" + i, group: "권역 (전체 연령)", label: g.name + " (" + present.join("·") + ")", gl: g.name + " 응답자", filter: function (r) { return g.langs.indexOf(r.lang) >= 0; } });
+    });
+    VIEWS.forEach(function (v) { v.n = recs.filter(v.filter).length; });
+    VIEWS = VIEWS.filter(function (v) { return v.n > 0 || v.id === "target"; });
+
+    function block(sub, keys, split) {
+      var F = sub.filter(isFan), N = sub.filter(function (r) { return !isFan(r); });
       return keys.map(function (key) {
-        var ALL = agg(target, key), F = agg(fans, key), N = agg(non, key);
-        var text = [];
-        if (split) text = compareText(key, F, N);
-        else if (QMETA[key].type === "scale") text = ["타깃 전체 평균은 " + f1(ALL.mean) + "점(" + scaleWord(ALL.mean) + ")입니다."];
-        else text = ["타깃 전체에서 " + topList(key, ALL, 3) + " 순으로 많았습니다."];
-        text = text.concat(meaningText(key, F, N, ALL));
-        return { key: key, title: QMETA[key].title, type: QMETA[key].type, meta: QMETA[key], split: split,
+        var ALL = agg(sub, key), Fa = agg(F, key), Na = agg(N, key);
+        var text = [], sp = split && Fa.total > 0 && Na.total > 0;
+        if (sp) text = compareText(key, Fa, Na);
+        else if (split && !ALL.total) text.push("응답이 없습니다.");
+        else if (split) text.push(QMETA[key].type === "scale" ? GL + " 평균은 " + f1(ALL.mean) + "점(" + scaleWord(ALL.mean) + ")입니다." : GL + "에서 " + topList(key, ALL, 3) + " 순으로 많았습니다.");
+        else if (QMETA[key].type === "scale") text = [GL + " 평균은 " + f1(ALL.mean) + "점(" + scaleWord(ALL.mean) + ")입니다."];
+        else text = [GL + "에서 " + topList(key, ALL, 3) + " 순으로 많았습니다."];
+        text = text.concat(meaningText(key, Fa, Na, ALL));
+        return { key: key, title: QMETA[key].title, type: QMETA[key].type, meta: QMETA[key], split: sp,
           labels: OPT[key] ? OPT[key][0].map(function (_, i) { return label(key, i); }) : ["1", "2", "3", "4", "5"],
-          all: ALL, fan: F, non: N, text: text };
+          all: ALL, fan: Fa, non: Na, text: text };
       });
     }
+    function view(id) {
+      var v = VIEWS.filter(function (x) { return x.id === id; })[0] || VIEWS[0];
+      var sub = recs.filter(v.filter), F = sub.filter(isFan);
+      GL = v.gl; IS_DEFAULT = v.id === "target";
+      var langCount = {}; sub.forEach(function (r) { langCount[r.lang] = (langCount[r.lang] || 0) + 1; });
+      var out = {
+        id: v.id, label: v.label, gl: v.gl,
+        counts: { n: sub.length, fans: F.length, non: sub.length - F.length, langs: langCount },
+        single: !F.length ? "nofan" : F.length === sub.length ? "allfan" : null,
+        profile: block(sub, ["age", "q3", "q31", "q4", "q9"], false),
+        taste: block(sub, ["q5", "q6", "q7", "q8"], true),
+        opinion: block(sub, ["q10", "q11", "q12", "q13", "q14", "q15", "q16", "q17", "q18", "q19", "q20", "q21", "q22"], true)
+      };
+      GL = "타깃 전체"; IS_DEFAULT = true;
+      return out;
+    }
+
     var regions = { all: regionStats(recs, isFan), target: regionStats(target, isFan) };
     var comments = recs.filter(function (r) { return r.q23; }).map(function (r) { return { lang: r.lang, text: r.q23, fan: isFan(r), target: isTarget(r) }; });
     var langCount = {}; recs.forEach(function (r) { langCount[r.lang] = (langCount[r.lang] || 0) + 1; });
+    var def = view("target");
     return {
       counts: { total: recs.length, target: target.length, fans: fans.length, non: non.length, older: older.length, excluded: recs.length - target.length, langs: langCount },
       notes: { fans: nTag(fans.length), non: nTag(non.length) },
-      profile: block(["age", "q3", "q31", "q4", "q9"], false),
-      taste: block(["q5", "q6", "q7", "q8"], true),
-      opinion: block(["q10", "q11", "q12", "q13", "q14", "q15", "q16", "q17", "q18", "q19", "q20", "q21", "q22"], true),
+      views: VIEWS.map(function (v) { return { id: v.id, group: v.group, label: v.label, n: v.n }; }),
+      view: view,
+      profile: def.profile, taste: def.taste, opinion: def.opinion,
       hypotheses: hypotheses(target, older, fans, non),
       suggestions: suggestions(target, fans, non),
       regions: regions,
